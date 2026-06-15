@@ -27,3 +27,4 @@ dist-ssr
 
 supabase/
 .bolt/
+__pycache__/
