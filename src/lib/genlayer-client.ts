@@ -6,24 +6,28 @@ const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 
 let cachedClient: any = null;
 let cachedFor: string | null = null;
-let connectedOnce = false;
 
 function buildClient(address: string) {
   if (cachedClient && cachedFor === address) return cachedClient;
-  cachedClient = createClient({
+
+  const client = createClient({
     chain: studionet,
     account: address as `0x${string}`,
   });
+
+  cachedClient = client;
   cachedFor = address;
-  connectedOnce = false;
-  return cachedClient;
+  return client;
 }
 
 async function ensureConnected(address: string) {
-  if (connectedOnce && cachedFor === address) return;
   const client = buildClient(address);
-  await (client as any).connect('studionet');
-  connectedOnce = true;
+  try {
+    await (client as any).connect('studionet');
+  } catch {
+    // Rabby/others: ignore connect error, already on correct network
+  }
+  return client;
 }
 
 let readonlyClient: any = null;
@@ -40,8 +44,7 @@ async function writeAndWait(
   args: unknown[],
   value: bigint = 0n
 ) {
-  await ensureConnected(address);
-  const client = buildClient(address);
+  const client = await ensureConnected(address);
 
   const hash = await client.writeContract({
     address: CONTRACT_ADDRESS,
@@ -50,7 +53,18 @@ async function writeAndWait(
     value,
   });
 
-  await client.waitForTransactionReceipt({ hash });
+  // Wait up to 3 min for Studionet finalization
+  const MAX_WAIT = 180_000;
+  const start = Date.now();
+  while (Date.now() - start < MAX_WAIT) {
+    try {
+      const receipt = await client.waitForTransactionReceipt({ hash });
+      if (receipt) return hash;
+    } catch {
+      // not ready
+    }
+    await new Promise(r => setTimeout(r, 5000));
+  }
   return hash;
 }
 

@@ -156,10 +156,10 @@ export default function CreateMarketPage() {
       );
 
       setSuccess(true);
-      await refreshMarkets();
       setTimeout(() => {
+        refreshMarkets();
         navigate('/markets');
-      }, 1500);
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create market');
     } finally {
@@ -175,7 +175,7 @@ export default function CreateMarketPage() {
             <CheckCircle2 className="w-8 h-8 text-emerald-400" />
           </div>
           <h2 className="text-2xl font-bold text-white">Market Created!</h2>
-          <p className="text-slate-400">Redirecting to markets...</p>
+          <p className="text-slate-400">Transaction submitted. Market will appear shortly...</p>
         </div>
       </div>
     );
